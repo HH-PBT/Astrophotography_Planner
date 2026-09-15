@@ -1,0 +1,21 @@
+{
+  "name": "Night Plan — deep sky session planner",
+  "short_name": "Night Plan",
+  "description": "Plans a night of deep sky imaging: targets, windows, horizon, moon, weather, and your own gallery.",
+  "start_url": ".",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#080a10",
+  "theme_color": "#080a10",
+  "categories": ["utilities", "education"],
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ],
+  "shortcuts": [
+    { "name": "Tonight", "url": "./?tab=tonight" },
+    { "name": "My images", "url": "./?tab=gallery" }
+  ]
+}
