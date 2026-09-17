@@ -368,6 +368,17 @@ canvas.altplot{touch-action:pan-y;cursor:crosshair}
   .spin,#prog i{animation-duration:1.2s !important;animation-iteration-count:infinite !important}
 }
 
+/* the imaged log: name and figures on their own line, controls beneath, so
+   nothing has to squeeze a target name into two characters */
+.logrows li{display:block;padding:12px 0}
+.logtop{display:flex;gap:10px;align-items:center;min-width:0}
+.logtop .nm{min-width:0;flex:1}
+.logacts{display:flex;flex-wrap:wrap;gap:6px;align-items:end;margin-top:10px}
+.logacts label.f{font-size:11px;color:var(--ink3);display:flex;flex-direction:column;gap:3px}
+.logacts input[type=date]{width:150px;min-height:36px;font-size:13px}
+.logacts .btn{flex:0 0 auto}
+.btn.warn{color:var(--amber);border-color:color-mix(in srgb,var(--amber) 40%,var(--line))}
+
 </style>
 </head>
 <body>
@@ -2878,6 +2889,8 @@ function viewGallery() {
   const logged = [...shotNames()];
   const mCount = logged.filter(n => (byName(n) || {}).m).length;
   const withPhotos = IMG.objects();
+  const totalMin = logged.reduce((a, n) => a + integTotal(n), 0);
+  const doneCount = logged.filter(n => isDone(n)).length;
   const mode = U.gview || 'photos';
 
   const head = `
@@ -2886,8 +2899,10 @@ function viewGallery() {
       <button class="btn sm primary" data-act="gpick">Add photos</button>
     </div>
     <div class="grid2" style="margin-top:10px">
-      <div class="stat"><b>${logged.length}</b>objects logged as imaged</div>
+      <div class="stat"><b>${logged.length}</b>objects shot${doneCount ? ' · ' + doneCount + ' finished' : ''}</div>
+      <div class="stat"><b>${totalMin ? dur(totalMin) : '—'}</b>stacked in total</div>
       <div class="stat"><b>${IMG.count}</b>frames stored${IMG.count ? ' · ' + mb(IMG.bytes) : ''}</div>
+      <div class="stat"><b>${withPhotos.length}</b>objects with photos</div>
     </div>
     <div class="bars" style="grid-template-columns:auto 1fr auto;margin-top:10px">
       <span class="bl">Messier</span>
@@ -2907,20 +2922,31 @@ function viewGallery() {
   if (mode === 'log') {
     if (!logged.length) return head + `<div class="empty">Nothing logged yet.
       <div class="empty2">Tap <b>+ Log</b> on a block once you have shot it, or add time from any target's page.</div></div>`;
-    const rows = logged.map(n => ({ n, o: byName(n), d: (S.imaged[n] || {}).date || (S.done[n] || {}).date || '',
+    const firstNight = n => {
+      const ss = ((S.integ[n] || {}).sessions || []).map(x => x.d).filter(Boolean).sort();
+      return ss[0] || (S.imaged[n] || {}).date || (S.done[n] || {}).date || '';
+    };
+    const rows = logged.map(n => ({ n, o: byName(n), d: firstNight(n),
       shots: IMG.for(n).length, mins: integTotal(n), fin: isDone(n) }))
       .sort((a, b) => (b.d || '').localeCompare(a.d || '') || a.n.localeCompare(b.n));
-    return head + `<div class="card"><ul class="list">
+    return head + `<div class="card"><ul class="list logrows">
       ${rows.map(r => {
         const cov = IMG.cover(r.n);
         return `<li>
-        ${cov && IMG.urls[cov.id] ? `<button class="minithumb" data-act="shot" data-i="${esc(cov.id)}"><img src="${IMG.urls[cov.id]}" alt=""></button>`
-          : `<span class="minithumb empty2">${r.o ? esc(P.TYPES[r.o.t] || '').slice(0, 1) : '?'}</span>`}
-        <div class="nm"><b data-act="obj" data-n="${esc(r.n)}">${r.fin ? '✓ ' : ''}${esc(r.o ? label(r.o) : r.n)}</b>
-          <span class="meta">${r.mins ? dur(r.mins) + ' logged' : 'no time logged'} · ${r.shots ? r.shots + (r.shots > 1 ? ' frames' : ' frame') : 'no photo yet'}${r.fin ? ' · finished for the season' : ''}</span></div>
-        <input type="date" value="${esc(r.d)}" data-act="imgdate" data-n="${esc(r.n)}" style="width:138px">
-        ${shotInput(r.n, '+')}
-        <button class="btn sm ghost" data-act="unimage" data-n="${esc(r.n)}">Remove</button>
+        <div class="logtop">
+          ${cov && IMG.urls[cov.id] ? `<button class="minithumb" data-act="shot" data-i="${esc(cov.id)}" aria-label="Open the cover frame"><img src="${IMG.urls[cov.id]}" alt=""></button>`
+          : `<span class="minithumb empty2" aria-hidden="true">${r.o ? esc(P.TYPES[r.o.t] || '').slice(0, 1) : '?'}</span>`}
+          <div class="nm"><b data-act="obj" data-n="${esc(r.n)}">${r.fin ? '✓ ' : ''}${esc(r.o ? label(r.o) : r.n)}</b>
+            <span class="meta">${r.o ? esc(P.TYPES[r.o.t]) + ' · ' : ''}${r.mins ? dur(r.mins) + ' logged' : 'no time logged'}${r.shots ? ' · ' + r.shots + (r.shots > 1 ? ' frames' : ' frame') : ''}${r.fin ? ' · done for the season' : ''}</span></div>
+        </div>
+        <div class="logacts">
+          <label class="f" style="margin:0">First shot
+            <input type="date" value="${esc(r.d)}" data-act="imgdate" data-n="${esc(r.n)}"></label>
+          ${shotInput(r.n, '+ Photo')}
+          <button class="btn sm ghost" data-act="logask" data-n="${esc(r.n)}">+ Time</button>
+          <button class="btn sm ghost ${r.fin ? '' : 'warn'}" data-act="seasondone" data-n="${esc(r.n)}">${r.fin ? 'Put back in the pool' : 'Done for the season'}</button>
+          <button class="btn sm ghost bad" data-act="unimage" data-n="${esc(r.n)}">Clear</button>
+        </div>
       </li>`; }).join('')}
     </ul></div>`;
   }
@@ -4185,8 +4211,15 @@ async function act(a, el, ev) {
       return;
     }
     case 'imgdate': {
-      if (S.imaged[n]) { S.imaged[n].date = el.value; S.save(); }
-      return;
+      /* edits the date of the first logged session, which is what the column shows */
+      const rec = S.integ[n];
+      if (rec && rec.sessions.length) {
+        const first = rec.sessions.slice().sort((a, b) => (a.d || '').localeCompare(b.d || ''))[0];
+        if (first) first.d = el.value;
+      }
+      if (S.imaged[n]) S.imaged[n].date = el.value;
+      if (S.done[n]) S.done[n].date = el.value;
+      S.save(); return;
     }
 
     /* ---- settings ---- */

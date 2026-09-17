@@ -2,7 +2,7 @@
    The app shell is cached so it opens instantly and works with no signal.
    Survey cutouts are cached as you look at them, capped, so targets you have
    already opened still show a picture in the field. */
-const SHELL = 'np-shell-v7';
+const SHELL = 'np-shell-v8';
 const SKY = 'np-sky-v1';
 const FILES = ['./', './index.html', './manifest.webmanifest',
   './icon-192.png', './icon-512.png', './icon-maskable-512.png'];
